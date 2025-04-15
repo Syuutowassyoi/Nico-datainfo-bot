@@ -162,16 +162,14 @@ async def on_message(message):
     if message.channel.id != CHANNEL_ID:
         return
     if message.content == "help info":
-        help_text = (
-            "📖 **Botコマンド一覧**
-"
-            "- `/test`：現在の再生数・コメント数を即時表示
-"
-            "- `infoconfig day-ranking YYYY-MM-DD`：指定日の支援者ランキングを表示
-"
-            "（例: infoconfig day-ranking 2025-04-14）"
-        )
-        await message.channel.send(help_text)
+    help_text = (
+        "📖 **Botコマンド一覧**\n"
+        "- `/test`：現在の再生数・コメント数を即時表示\n"
+        "- `infoconfig day-ranking YYYY-MM-DD`：指定日の支援者ランキングを表示\n"
+        "（例: infoconfig day-ranking 2025-04-14）"
+    )
+    await message.channel.send(help_text)
+)
     elif message.content == "/test":
         await send_update_once()
     if message.content.startswith("infoconfig day-ranking"):
@@ -250,4 +248,4 @@ async def send_daily_ranking():
 loop = asyncio.get_event_loop()
 loop.create_task(client.start(TOKEN))
 loop.create_task(alert_client.start(ALERT_BOT_TOKEN))
-loop.run_forever() 
+loop.run_forever()
