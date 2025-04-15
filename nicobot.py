@@ -125,9 +125,28 @@ async def send_periodic_update():
         await send_update_once(is_startup=True)
         startup_flag = False
 
+    short_interval = False  # 5分間隔モードかどうか
+
     while not client.is_closed():
-        await send_update_once()
-        await asyncio.sleep(900)  # 15分ごとに定期送信  # 5秒ごとにチェック
+        now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
+        data = await fetch_nicovideo_data(VIDEO_ID)
+
+        if data:
+            _, _, comment = data
+            next_milestone = ((comment // 1_000_000) + 1) * 1_000_000
+            remaining = next_milestone - comment
+            short_interval = remaining <= 5000
+
+        # 時刻を xx:00, xx:05, ... に合わせる
+        interval = 5 if short_interval else 15
+        next_minute = ((now.minute // interval + 1) * interval) % 60
+        next_time = now.replace(minute=next_minute, second=0, microsecond=0)
+        if next_minute == 0:
+            next_time += datetime.timedelta(hours=1)
+        wait_seconds = (next_time - now).total_seconds()
+
+        await asyncio.sleep(wait_seconds)
+        await send_update_once()  # 15分ごとに定期送信  # 5秒ごとにチェック
 
 @client.event
 async def on_ready():
