@@ -250,4 +250,4 @@ async def send_daily_ranking():
 loop = asyncio.get_event_loop()
 loop.create_task(client.start(TOKEN))
 loop.create_task(alert_client.start(ALERT_BOT_TOKEN))
-loop.run_forever()
+loop.run_forever() 
