@@ -19,11 +19,11 @@ SHEET_NAME = "シート1"
 MILESTONE_FILE = "milestone.json"
 
 intents = discord.Intents.default()
+intents.message_content = True
 client = discord.Client(intents=intents)
-
 alert_client = discord.Client(intents=intents)
 
-startup_flag = True  # 起動直後に1回送信するためのフラグ
+startup_flag = True
 
 def log_to_sheet(milestone, timestamp):
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -138,6 +138,16 @@ async def on_ready():
 @alert_client.event
 async def on_ready():
     print(f"アラートBotがログインしました: {alert_client.user}")
+
+@client.event
+async def on_message(message):
+    if message.content == "/test" and message.channel.id == CHANNEL_ID:
+        await send_update_once()
+
+@alert_client.event
+async def on_message(message):
+    if message.content == "/test" and message.channel.id == ALERT_CHANNEL_ID:
+        await message.channel.send("✅ 生きてるよ！")
 
 loop = asyncio.get_event_loop()
 loop.create_task(client.start(TOKEN))
