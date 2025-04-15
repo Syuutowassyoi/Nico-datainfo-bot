@@ -23,6 +23,8 @@ client = discord.Client(intents=intents)
 
 alert_client = discord.Client(intents=intents)
 
+startup_flag = True  # 起動直後に1回送信するためのフラグ
+
 def log_to_sheet(milestone, timestamp):
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     creds_dict = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
@@ -71,7 +73,7 @@ async def alert_if_needed(remaining, next_milestone):
         if channel:
             await channel.send(f"🚨 キリ番接近！{next_milestone:,} コメントまで残り {remaining:,} コメントです！")
 
-async def send_update_once():
+async def send_update_once(is_startup=False):
     channel = client.get_channel(CHANNEL_ID)
     data = await fetch_nicovideo_data(VIDEO_ID)
     now_dt = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
@@ -101,8 +103,9 @@ async def send_update_once():
             log_to_sheet(previous_milestone, now_dt.strftime("%Y-%m-%d %H:%M:%S"))
 
         milestone_text = f"{next_milestone:,} コメントまで：{remaining:,} コメント"
+        prefix = "✅ 起動時チェック\n" if is_startup else ""
         await channel.send(
-            f"\n📺 **{title}**\n🕒 {now} 現在\n"
+            f"{prefix}📺 **{title}**\n🕒 {now} 現在\n"
             f"▶️ 再生数: {view:,} 回\n💬 コメント数: {comment:,} 件\n"
             f"🏁 {milestone_text}\n"
             f"⏳ {elapsed_text}"
@@ -113,8 +116,11 @@ async def send_update_once():
         await channel.send(f"⚠️ {now}：動画データの取得に失敗しました。")
 
 async def send_periodic_update():
+    global startup_flag
     await client.wait_until_ready()
-    await send_update_once()  # 最初の起動時にも送信
+    if startup_flag:
+        await send_update_once(is_startup=True)
+        startup_flag = False
     while not client.is_closed():
         now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
         next_time = now.replace(minute=((now.minute // 15 + 1) * 15) % 60, second=0, microsecond=0)
