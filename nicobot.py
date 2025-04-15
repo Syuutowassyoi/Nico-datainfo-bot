@@ -125,7 +125,7 @@ async def send_periodic_update():
         await send_update_once(is_startup=True)
         startup_flag = False
 
-    short_interval = False  # 5分間隔モードかどうか
+    short_interval = False
 
     while not client.is_closed():
         now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
@@ -137,7 +137,6 @@ async def send_periodic_update():
             remaining = next_milestone - comment
             short_interval = remaining <= 5000
 
-        # 時刻を xx:00, xx:05, ... に合わせる
         interval = 5 if short_interval else 15
         next_minute = ((now.minute // interval + 1) * interval) % 60
         next_time = now.replace(minute=next_minute, second=0, microsecond=0)
@@ -146,12 +145,13 @@ async def send_periodic_update():
         wait_seconds = (next_time - now).total_seconds()
 
         await asyncio.sleep(wait_seconds)
-        await send_update_once()  # 15分ごとに定期送信  # 5秒ごとにチェック
+        await send_update_once()
 
 @client.event
 async def on_ready():
     print(f"Botがログインしました: {client.user}")
     client.loop.create_task(send_periodic_update())
+    client.loop.create_task(send_daily_ranking())
 
 @alert_client.event
 async def on_ready():
@@ -159,13 +159,93 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
-    if message.content == "/test" and message.channel.id == CHANNEL_ID:
+    if message.channel.id != CHANNEL_ID:
+        return
+    if message.content == "help info":
+        help_text = (
+            "📖 **Botコマンド一覧**
+"
+            "- `/test`：現在の再生数・コメント数を即時表示
+"
+            "- `infoconfig day-ranking YYYY-MM-DD`：指定日の支援者ランキングを表示
+"
+            "（例: infoconfig day-ranking 2025-04-14）"
+        )
+        await message.channel.send(help_text)
+    elif message.content == "/test":
         await send_update_once()
+    if message.content.startswith("infoconfig day-ranking"):
+        try:
+            _, _, date_str = message.content.strip().split()
+            dt = datetime.datetime.strptime(date_str, "%Y-%m-%d")
+            y, m, d = dt.year, dt.month, dt.day
+            rankings = await fetch_supporter_ranking(y, m, d)
+            if rankings:
+                text = "\n".join([f"{i+1}位: {name} - {count:,}コメント" for i, (name, count) in enumerate(rankings)])
+                await message.channel.send(f"📊 支援者ランキング（{dt.strftime('%Y/%m/%d')}）\n{text}")
+            else:
+                await message.channel.send(f"⚠️ 指定された日のランキングが見つかりませんでした。")
+        except Exception as e:
+            await message.channel.send(f"⚠️ 日付形式が間違っています。例: infoconfig day-ranking 2025-04-14")
 
 @alert_client.event
 async def on_message(message):
     if message.content == "/test" and message.channel.id == ALERT_CHANNEL_ID:
         await message.channel.send("✅ 生きてるよ！")
+
+async def fetch_supporter_ranking(y=None, m=None, d=None):
+    tz = datetime.timezone(datetime.timedelta(hours=9))
+    if y is None or m is None or d is None:
+        today = datetime.datetime.now(tz)
+        yesterday = today - datetime.timedelta(days=1)
+        y, m, d = yesterday.year, yesterday.month, yesterday.day
+
+    date_path = f"{y:04d}-{m:02d}/{y:04d}-{m:02d}-{d:02d}.txt"
+    url = f"https://sosuteno.com/jien/STLog/{date_path}"
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            if response.status != 200:
+                print(f"支援者ランキングの取得失敗: {response.status}")
+                return None
+            text = await response.text(encoding='utf-8')
+
+    in_ranking = False
+    rankings = []
+    for line in text.splitlines():
+        line = line.strip()
+        if line.startswith("[支援者内訳]"):
+            in_ranking = True
+            continue
+        if in_ranking:
+            if line == "" or line.startswith("集計終"):
+                break
+            if " さん " in line:
+                name, rest = line.split(" さん ", 1)
+                comments = rest.split("コメ")[0].strip()
+                rankings.append((name + " さん", int(comments.replace(",", ""))))
+    rankings.sort(key=lambda x: x[1], reverse=True)
+    return rankings
+
+async def send_daily_ranking():
+    await client.wait_until_ready()
+    while True:
+        now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
+        target = now.replace(hour=0, minute=1, second=0, microsecond=0)
+        if now >= target:
+            target += datetime.timedelta(days=1)
+        wait_seconds = (target - now).total_seconds()
+        await asyncio.sleep(wait_seconds)
+
+        rankings = await fetch_supporter_ranking()
+        if rankings:
+            channel = client.get_channel(CHANNEL_ID)
+            text = "\n".join([f"{i+1}位: {name} - {count:,}コメント" for i, (name, count) in enumerate(rankings)])
+            yesterday = now - datetime.timedelta(days=1)
+            url = f"https://sosuteno.com/jien/STLog/{yesterday.strftime('%Y-%m')}/{yesterday.strftime('%Y-%m-%d')}.txt"
+            await channel.send(f"📝 {yesterday.strftime('%Y年%m月%d日')}支援者ランキング
+{text}
+🔗 {url}")
 
 loop = asyncio.get_event_loop()
 loop.create_task(client.start(TOKEN))
