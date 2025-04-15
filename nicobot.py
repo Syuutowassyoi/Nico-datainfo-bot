@@ -21,7 +21,8 @@ client = discord.Client(intents=intents)
 
 def log_to_sheet(milestone, timestamp):
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = Credentials.from_service_account_file("bot-key.json", scopes=scope)
+    creds_dict = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
+    creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
     gc = gspread.authorize(creds)
     sh = gc.open_by_key(SHEET_ID)
     worksheet = sh.worksheet(SHEET_NAME)
@@ -100,7 +101,7 @@ async def send_periodic_update():
         else:
             await channel.send(f"⚠️ {now}：動画データの取得に失敗しました。")
 
-        await asyncio.sleep(900)
+        await asyncio.sleep(300)  # 5分
 
 @client.event
 async def on_ready():
