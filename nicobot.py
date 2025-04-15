@@ -121,14 +121,13 @@ async def send_periodic_update():
     if startup_flag:
         await send_update_once(is_startup=True)
         startup_flag = False
+
     while not client.is_closed():
         now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
-        next_time = now.replace(minute=((now.minute // 15 + 1) * 15) % 60, second=0, microsecond=0)
-        if next_time <= now:
-            next_time += datetime.timedelta(hours=1)
-        wait_seconds = (next_time - now).total_seconds()
-        await asyncio.sleep(wait_seconds)
-        await send_update_once()
+        if now.minute % 15 == 0 and now.second < 5:
+            await send_update_once()
+            await asyncio.sleep(60)  # 1分休憩して重複送信を防ぐ
+        await asyncio.sleep(5)  # 5秒ごとにチェック
 
 @client.event
 async def on_ready():
