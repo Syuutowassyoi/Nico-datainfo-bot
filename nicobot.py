@@ -27,7 +27,10 @@ startup_flag = True
 
 def log_to_sheet(milestone, timestamp):
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds_dict = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
+    creds_env = os.getenv("GOOGLE_CREDENTIALS")
+    if creds_env is None:
+        raise ValueError("GOOGLE_CREDENTIALS が設定されていません。スプレッドシートにアクセスできません。")
+    creds_dict = json.loads(creds_env)
     creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
     gc = gspread.authorize(creds)
     sh = gc.open_by_key(SHEET_ID)
@@ -123,11 +126,8 @@ async def send_periodic_update():
         startup_flag = False
 
     while not client.is_closed():
-        now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
-        if now.minute % 15 == 0 and now.second < 5:
-            await send_update_once()
-            await asyncio.sleep(60)  # 1分休憩して重複送信を防ぐ
-        await asyncio.sleep(5)  # 5秒ごとにチェック
+        await send_update_once()
+        await asyncio.sleep(900)  # 15分ごとに定期送信  # 5秒ごとにチェック
 
 @client.event
 async def on_ready():
