@@ -1,1 +1,2 @@
-python nicobot.py
+web: python nicobot.py
+
