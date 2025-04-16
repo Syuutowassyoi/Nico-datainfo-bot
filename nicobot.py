@@ -165,16 +165,16 @@ async def on_message(message):
         help_text = (
             "📖 **Botコマンド一覧**\n"
             "- `/test`：現在の再生数・コメント数を即時表示\n"
-            "- `infoconfig day-ranking YYYY-MM-DD`：指定日の支援者ランキングを表示\n"
-            "（例: infoconfig day-ranking 2025-04-14）"
+            "- `daily-ranking YYYY/MM/DD`：指定日の支援者ランキングを表示\n"
+            "（例: daily-ranking 2025/04/14）"
         )
         await message.channel.send(help_text)
     elif message.content == "/test":
         await send_update_once()
-    if message.content.startswith("infoconfig day-ranking"):
+    if message.content.startswith("daily-ranking"):
         try:
             _, _, date_str = message.content.strip().split()
-            dt = datetime.datetime.strptime(date_str, "%Y-%m-%d")
+            dt = datetime.datetime.strptime(date_str, "%Y/%m/%d")
             y, m, d = dt.year, dt.month, dt.day
             rankings = await fetch_supporter_ranking(y, m, d)
             if rankings:
@@ -183,7 +183,7 @@ async def on_message(message):
             else:
                 await message.channel.send(f"⚠️ 指定された日のランキングが見つかりませんでした。")
         except Exception as e:
-            await message.channel.send(f"⚠️ 日付形式が間違っています。例: infoconfig day-ranking 2025-04-14")
+            await message.channel.send(f"⚠️ 日付形式が間違っています。例: daily-ranking 2025/04/14")
 
 @alert_client.event
 async def on_message(message):
