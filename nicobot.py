@@ -57,7 +57,12 @@ async def fetch_nicovideo_data(video_id):
                 return None
 
 async def send_update_once(is_startup=False):
+    await client.wait_until_ready()
     channel = client.get_channel(CHANNEL_ID)
+    if channel is None:
+        print("チャンネルが見つかりません。IDを確認してください。")
+        return
+
     data = await fetch_nicovideo_data(VIDEO_ID)
     now_dt = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
     now = now_dt.strftime("%Y-%m-%d %H:%M:%S")
