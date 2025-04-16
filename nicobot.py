@@ -165,7 +165,4 @@ async def main():
         )
 
 asyncio.run(main())
-loop.create_task(send_periodic_update())
-loop.create_task(client.start(TOKEN))
-loop.create_task(alert_client.start(ALERT_BOT_TOKEN))
-loop.run_forever()
+
