@@ -173,7 +173,7 @@ async def on_message(message):
         await send_update_once()
     if message.content.startswith("daily-ranking"):
         try:
-            _, _, date_str = message.content.strip().split()
+            _, date_str = message.content.strip().split(maxsplit=1)
             dt = datetime.datetime.strptime(date_str, "%Y/%m/%d")
             y, m, d = dt.year, dt.month, dt.day
             rankings = await fetch_supporter_ranking(y, m, d)
