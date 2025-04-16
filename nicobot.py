@@ -130,6 +130,11 @@ async def on_message(message):
     if message.content == "/daatatest" and message.channel.id == ALERT_CHANNEL_ID:
         await message.channel.send("✅ 生きてるよ！")
 
+@client.event
+async def on_message(message):
+    if message.content == "/daatatest" and message.channel.id == CHANNEL_ID:
+        await send_update_once(is_startup=True)
+
 async def send_periodic_update():
     global startup_flag
     await client.wait_until_ready()
