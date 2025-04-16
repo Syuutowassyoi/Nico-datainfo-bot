@@ -56,11 +56,7 @@ async def fetch_nicovideo_data(video_id):
                 print(f"データ解析エラー: {e}")
                 return None
             text = "
-".join([f"{i+1}位: {name} - {count:,}コメント" for i, (name, count) in enumerate(rankings)])
-                await message.channel.send(f"📊 支援者ランキング（{dt.strftime('%Y/%m/%d')}）
-{text}")
-            else:
-                await message.channel.send("⚠️ 指定された日のランキングが見つかりませんでした。")
+
 
           
 
@@ -94,19 +90,17 @@ async def send_update_once(is_startup=False):
             log_to_sheet(previous_milestone, now_dt.strftime("%Y-%m-%d %H:%M:%S"))
 
         milestone_text = f"{next_milestone:,} コメントまで：{remaining:,} コメント"
-        prefix = "✅ 起動時チェック
-" if is_startup else ""
+prefix = "✅ 起動時チェック\n" if is_startup else ""
+
         await channel.send(
-            f"{prefix}📺 **{title}**
-🕒 {now} 現在
-"
-            f"▶️ 再生数: {view:,} 回
-💬 コメント数: {comment:,} 件
-"
-            f"🏁 {milestone_text}
-"
-            f"⏳ {elapsed_text}"
-        )
+    f"{prefix}📺 **{title}**\n"
+    f"🕒 {now} 現在\n"
+    f"▶️ 再生数: {view:,} 回\n"
+    f"💬 コメント数: {comment:,} 件\n"
+    f"🏁 {milestone_text}\n"
+    f"⏳ {elapsed_text}"
+)
+
     else:
         await channel.send(f"⚠️ {now}：動画データの取得に失敗しました。")
 
