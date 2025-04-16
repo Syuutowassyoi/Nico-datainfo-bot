@@ -87,7 +87,7 @@ async def send_update_once(is_startup=False):
 
         milestone_text = f"{next_milestone:,} コメントまで：{remaining:,} コメント"
         prefix = "✅ 起動時チェック\n" if is_startup else ""
-        await channel.send(
+                message = (
             f"{prefix}📺 **{title}**
 "
             f"🕒 {now} 現在
@@ -98,9 +98,15 @@ async def send_update_once(is_startup=False):
 "
             f"🏁 {milestone_text}
 "
-            f"⏳ {elapsed_text}
-"
-            f"🔗 https://sosuteno.com/jien/STLog/{now_dt.strftime('%Y-%m')}/{now_dt.strftime('%Y-%m-%d')}.txt"
+            f"⏳ {elapsed_text}"
+        )
+
+        if is_startup or now_dt.strftime("%H:%M") == "00:01":
+            message += f"
+🔗 https://sosuteno.com/jien/STLog/{now_dt.strftime('%Y-%m')}/{now_dt.strftime('%Y-%m-%d')}.txt"
+
+        await channel.send(message)}/{now_dt.strftime('%Y-%m-%d')}.txt"
+        )}/{now_dt.strftime('%Y-%m-%d')}.txt"
         )
         )
     else:
