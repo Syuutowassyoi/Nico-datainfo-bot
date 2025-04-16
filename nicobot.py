@@ -87,8 +87,8 @@ async def send_update_once(is_startup=False):
             log_to_sheet(previous_milestone, now_dt.strftime("%Y-%m-%d %H:%M:%S"))
 
         milestone_text = f"{next_milestone:,} コメントまで：{remaining:,} コメント"
-        prefix = "✅ 起動時チェック
-" if is_startup else ""
+prefix = "✅ 起動時チェック\n" if is_startup else ""
+
 
         await channel.send(
     f"{prefix}📺 **{title}**\n"
