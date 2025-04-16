@@ -83,6 +83,8 @@ async def send_update_once(is_startup=False):
     now = now_dt.strftime("%Y-%m-%d %H:%M:%S")
 
     if data:
+            last_milestone = milestone_data["last_milestone"]
+            ts = milestone_data["timestamp"]
         title, view, comment = data
         next_milestone = ((comment // 1_000_000) + 1) * 1_000_000
         previous_milestone = (comment // 1_000_000) * 1_000_000
@@ -91,8 +93,6 @@ async def send_update_once(is_startup=False):
         milestone_data = load_last_milestone()
         elapsed_text = " - "
         if milestone_data:
-            last_milestone = milestone_data["last_milestone"]
-            ts = milestone_data["timestamp"]
             if previous_milestone == last_milestone:
                 prev_time = datetime.datetime.fromisoformat(ts)
                 elapsed = now_dt - prev_time
@@ -195,7 +195,7 @@ async def on_message(message):
             else:
                 await message.channel.send("⚠️ 指定された日のランキングが見つかりませんでした。")
 
-            await message.channel.send(f"⚠️ 日付形式が間違っています。例: daily-ranking 2025/04/14")
+          
 
 @alert_client.event
 async def on_message(message):
