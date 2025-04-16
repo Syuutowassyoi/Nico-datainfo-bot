@@ -55,7 +55,6 @@ async def fetch_nicovideo_data(video_id):
             except Exception as e:
                 print(f"データ解析エラー: {e}")
                 return None
-                      
 
 async def send_update_once(is_startup=False):
     channel = client.get_channel(CHANNEL_ID)
@@ -87,20 +86,25 @@ async def send_update_once(is_startup=False):
             log_to_sheet(previous_milestone, now_dt.strftime("%Y-%m-%d %H:%M:%S"))
 
         milestone_text = f"{next_milestone:,} コメントまで：{remaining:,} コメント"
-                                prefix = "✅ 起動時チェック
-" if is_startup else ""
+        prefix = "✅ 起動時チェック\n" if is_startup else ""
         await channel.send(
-    f"{prefix}📺 **{title}**\n"
-    f"🕒 {now} 現在\n"
-    f"▶️ 再生数: {view:,} 回\n"
-    f"💬 コメント数: {comment:,} 件\n"
-    f"🏁 {milestone_text}\n"
-    f"⏳ {elapsed_text}"
-)
-
+            f"{prefix}📺 **{title}**
+"
+            f"🕒 {now} 現在
+"
+            f"▶️ 再生数: {view:,} 回
+"
+            f"💬 コメント数: {comment:,} 件
+"
+            f"🏁 {milestone_text}
+"
+            f"⏳ {elapsed_text}
+"
+            f"🔗 https://sosuteno.com/jien/STLog/{now_dt.strftime('%Y-%m')}/{now_dt.strftime('%Y-%m-%d')}.txt"
+        )
+        )
     else:
         await channel.send(f"⚠️ {now}：動画データの取得に失敗しました。")
-
 
 def load_last_milestone():
     if not os.path.exists(MILESTONE_FILE):
@@ -119,60 +123,6 @@ def save_milestone(milestone, now_dt):
 async def on_message(message):
     if message.content == "/test" and message.channel.id == ALERT_CHANNEL_ID:
         await message.channel.send("✅ 生きてるよ！")
-
-async def fetch_supporter_ranking(y=None, m=None, d=None):
-    tz = datetime.timezone(datetime.timedelta(hours=9))
-    if y is None or m is None or d is None:
-        today = datetime.datetime.now(tz)
-        yesterday = today - datetime.timedelta(days=1)
-        y, m, d = yesterday.year, yesterday.month, yesterday.day
-
-    date_path = f"{y:04d}-{m:02d}/{y:04d}-{m:02d}-{d:02d}.txt"
-    url = f"https://sosuteno.com/jien/STLog/{date_path}"
-
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            if response.status != 200:
-                print(f"支援者ランキングの取得失敗: {response.status}")
-                return None
-            text = await response.text(encoding='utf-8')
-
-    in_ranking = False
-    rankings = []
-    for line in text.splitlines():
-        line = line.strip()
-        if line.startswith("[支援者内訳]"):
-            in_ranking = True
-            continue
-        if in_ranking:
-            if line == "" or line.startswith("集計終"):
-                break
-            if " さん " in line:
-                name, rest = line.split(" さん ", 1)
-                comments = rest.split("コメ")[0].strip()
-                rankings.append((name + " さん", int(comments.replace(",", ""))))
-    rankings.sort(key=lambda x: x[1], reverse=True)
-    return rankings
-
-async def send_daily_ranking():
-    await client.wait_until_ready()
-    while True:
-        now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
-        target = now.replace(hour=0, minute=1, second=0, microsecond=0)
-        if now >= target:
-            target += datetime.timedelta(days=1)
-        wait_seconds = (target - now).total_seconds()
-        await asyncio.sleep(wait_seconds)
-
-        rankings = await fetch_supporter_ranking()
-        if rankings:
-            channel = client.get_channel(CHANNEL_ID)
-            text = "\n".join([f"{i+1}位: {name} - {count:,}コメント" for i, (name, count) in enumerate(rankings)])
-            yesterday = now - datetime.timedelta(days=1)
-            url = f"https://sosuteno.com/jien/STLog/{yesterday.strftime('%Y-%m')}/{yesterday.strftime('%Y-%m-%d')}.txt"
-            await channel.send(
-                f"📝 {yesterday.strftime('%Y年%m月%d日')}支援者ランキング\n{text}\n🔗 {url}"
-            )
 
 async def send_periodic_update():
     global startup_flag
