@@ -162,14 +162,13 @@ async def on_message(message):
     if message.channel.id != CHANNEL_ID:
         return
     if message.content == "help info":
-    help_text = (
-        "📖 **Botコマンド一覧**\n"
-        "- `/test`：現在の再生数・コメント数を即時表示\n"
-        "- `infoconfig day-ranking YYYY-MM-DD`：指定日の支援者ランキングを表示\n"
-        "（例: infoconfig day-ranking 2025-04-14）"
-    )
-    await message.channel.send(help_text)
-)
+        help_text = (
+            "📖 **Botコマンド一覧**\n"
+            "- `/test`：現在の再生数・コメント数を即時表示\n"
+            "- `infoconfig day-ranking YYYY-MM-DD`：指定日の支援者ランキングを表示\n"
+            "（例: infoconfig day-ranking 2025-04-14）"
+        )
+        await message.channel.send(help_text)
     elif message.content == "/test":
         await send_update_once()
     if message.content.startswith("infoconfig day-ranking"):
@@ -241,9 +240,9 @@ async def send_daily_ranking():
             text = "\n".join([f"{i+1}位: {name} - {count:,}コメント" for i, (name, count) in enumerate(rankings)])
             yesterday = now - datetime.timedelta(days=1)
             url = f"https://sosuteno.com/jien/STLog/{yesterday.strftime('%Y-%m')}/{yesterday.strftime('%Y-%m-%d')}.txt"
-            await channel.send(f"📝 {yesterday.strftime('%Y年%m月%d日')}支援者ランキング
-{text}
-🔗 {url}")
+            await channel.send(
+                f"📝 {yesterday.strftime('%Y年%m月%d日')}支援者ランキング\n{text}\n🔗 {url}"
+            )
 
 loop = asyncio.get_event_loop()
 loop.create_task(client.start(TOKEN))
