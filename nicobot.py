@@ -156,7 +156,15 @@ async def send_periodic_update():
         await asyncio.sleep(wait_seconds)
         await send_update_once()
 
-loop = asyncio.get_event_loop()
+async def main():
+    async with client, alert_client:
+        await asyncio.gather(
+            send_periodic_update(),
+            client.start(TOKEN),
+            alert_client.start(ALERT_BOT_TOKEN)
+        )
+
+asyncio.run(main())
 loop.create_task(send_periodic_update())
 loop.create_task(client.start(TOKEN))
 loop.create_task(alert_client.start(ALERT_BOT_TOKEN))
