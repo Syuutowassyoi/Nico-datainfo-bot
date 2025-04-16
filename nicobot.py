@@ -55,26 +55,14 @@ async def fetch_nicovideo_data(video_id):
             except Exception as e:
                 print(f"データ解析エラー: {e}")
                 return None
+            text = "
+".join([f"{i+1}位: {name} - {count:,}コメント" for i, (name, count) in enumerate(rankings)])
+                await message.channel.send(f"📊 支援者ランキング（{dt.strftime('%Y/%m/%d')}）
+{text}")
+            else:
+                await message.channel.send("⚠️ 指定された日のランキングが見つかりませんでした。")
 
-def load_last_milestone():
-    if not os.path.exists(MILESTONE_FILE):
-        return None
-    with open(MILESTONE_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def save_milestone(milestone, now_dt):
-    with open(MILESTONE_FILE, "w", encoding="utf-8") as f:
-        json.dump({
-            "last_milestone": milestone,
-            "timestamp": now_dt.isoformat()
-        }, f)
-
-async def alert_if_needed(remaining, next_milestone):
-    if remaining <= 5000:
-        await alert_client.wait_until_ready()
-        channel = alert_client.get_channel(ALERT_CHANNEL_ID)
-        if channel:
-            await channel.send(f"🚨 キリ番接近！{next_milestone:,} コメントまで残り {remaining:,} コメントです！")
+          
 
 async def send_update_once(is_startup=False):
     channel = client.get_channel(CHANNEL_ID)
@@ -83,8 +71,6 @@ async def send_update_once(is_startup=False):
     now = now_dt.strftime("%Y-%m-%d %H:%M:%S")
 
     if data:
-            last_milestone = milestone_data["last_milestone"]
-            ts = milestone_data["timestamp"]
         title, view, comment = data
         next_milestone = ((comment // 1_000_000) + 1) * 1_000_000
         previous_milestone = (comment // 1_000_000) * 1_000_000
@@ -93,6 +79,8 @@ async def send_update_once(is_startup=False):
         milestone_data = load_last_milestone()
         elapsed_text = " - "
         if milestone_data:
+            last_milestone = milestone_data["last_milestone"]
+            ts = milestone_data["timestamp"]
             if previous_milestone == last_milestone:
                 prev_time = datetime.datetime.fromisoformat(ts)
                 elapsed = now_dt - prev_time
@@ -106,96 +94,35 @@ async def send_update_once(is_startup=False):
             log_to_sheet(previous_milestone, now_dt.strftime("%Y-%m-%d %H:%M:%S"))
 
         milestone_text = f"{next_milestone:,} コメントまで：{remaining:,} コメント"
-        prefix = "✅ 起動時チェック\n" if is_startup else ""
+        prefix = "✅ 起動時チェック
+" if is_startup else ""
         await channel.send(
-            f"{prefix}📺 **{title}**\n🕒 {now} 現在\n"
-            f"▶️ 再生数: {view:,} 回\n💬 コメント数: {comment:,} 件\n"
-            f"🏁 {milestone_text}\n"
+            f"{prefix}📺 **{title}**
+🕒 {now} 現在
+"
+            f"▶️ 再生数: {view:,} 回
+💬 コメント数: {comment:,} 件
+"
+            f"🏁 {milestone_text}
+"
             f"⏳ {elapsed_text}"
         )
-
-        await alert_if_needed(remaining, next_milestone)
     else:
         await channel.send(f"⚠️ {now}：動画データの取得に失敗しました。")
 
-async def send_periodic_update():
-    global startup_flag
-    await client.wait_until_ready()
-    if startup_flag:
-        await send_update_once(is_startup=True)
-        startup_flag = False
 
-    short_interval = False
+def load_last_milestone():
+    if not os.path.exists(MILESTONE_FILE):
+        return None
+    with open(MILESTONE_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
 
-    while not client.is_closed():
-        now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
-        data = await fetch_nicovideo_data(VIDEO_ID)
-
-        if data:
-            _, _, comment = data
-            next_milestone = ((comment // 1_000_000) + 1) * 1_000_000
-            remaining = next_milestone - comment
-            short_interval = remaining <= 5000
-
-        interval = 5 if short_interval else 15
-        next_minute = ((now.minute // interval + 1) * interval) % 60
-        next_time = now.replace(minute=next_minute, second=0, microsecond=0)
-        if next_minute == 0:
-            next_time += datetime.timedelta(hours=1)
-        wait_seconds = (next_time - now).total_seconds()
-
-        await asyncio.sleep(wait_seconds)
-        await send_update_once()
-
-@client.event
-async def on_ready():
-    print(f"Botがログインしました: {client.user}")
-    client.loop.create_task(send_periodic_update())
-    client.loop.create_task(send_daily_ranking())
-
-@alert_client.event
-async def on_ready():
-    print(f"アラートBotがログインしました: {alert_client.user}")
-
-@client.event
-async def on_message(message):
-    if message.channel.id != CHANNEL_ID:
-        return
-    if message.content == "help info":
-        help_text = (
-            "📖 **Botコマンド一覧**\n"
-            "- `/test`：現在の再生数・コメント数を即時表示\n"
-            "- `daily-ranking YYYY/MM/DD`：指定日の支援者ランキングを表示\n"
-            "（例: daily-ranking 2025/04/14）"
-        )
-        await message.channel.send(help_text)
-    elif message.content == "/test":
-        await send_update_once()
-    if message.content.startswith("daily-ranking"):
-        def check_author(m):
-            return m.author == message.author and m.channel == message.channel
-        try:
-            await message.channel.send("📅 年（4桁）を入力してください：")
-            year_msg = await client.wait_for("message", check=check_author, timeout=60.0)
-            await message.channel.send("📅 月（1〜12）を入力してください：")
-            month_msg = await client.wait_for("message", check=check_author, timeout=60.0)
-            await message.channel.send("📅 日（1〜31）を入力してください：")
-            day_msg = await client.wait_for("message", check=check_author, timeout=60.0)
-
-            y = int(year_msg.content)
-            m = int(month_msg.content)
-            d = int(day_msg.content)
-            dt = datetime.datetime(year=y, month=m, day=d)
-            rankings = await fetch_supporter_ranking(y, m, d)
-            if rankings:
-                text = "
-".join([f"{i+1}位: {name} - {count:,}コメント" for i, (name, count) in enumerate(rankings)])
-                await message.channel.send(f"📊 支援者ランキング（{dt.strftime('%Y/%m/%d')}）
-{text}")
-            else:
-                await message.channel.send("⚠️ 指定された日のランキングが見つかりませんでした。")
-
-          
+def save_milestone(milestone, now_dt):
+    with open(MILESTONE_FILE, "w", encoding="utf-8") as f:
+        json.dump({
+            "last_milestone": milestone,
+            "timestamp": now_dt.isoformat()
+        }, f)
 
 @alert_client.event
 async def on_message(message):
@@ -256,7 +183,37 @@ async def send_daily_ranking():
                 f"📝 {yesterday.strftime('%Y年%m月%d日')}支援者ランキング\n{text}\n🔗 {url}"
             )
 
+async def send_periodic_update():
+    global startup_flag
+    await client.wait_until_ready()
+    if startup_flag:
+        await send_update_once(is_startup=True)
+        startup_flag = False
+
+    short_interval = False
+
+    while not client.is_closed():
+        now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
+        data = await fetch_nicovideo_data(VIDEO_ID)
+
+        if data:
+            _, _, comment = data
+            next_milestone = ((comment // 1_000_000) + 1) * 1_000_000
+            remaining = next_milestone - comment
+            short_interval = remaining <= 5000
+
+        interval = 5 if short_interval else 15
+        next_minute = ((now.minute // interval + 1) * interval) % 60
+        next_time = now.replace(minute=next_minute, second=0, microsecond=0)
+        if next_minute == 0:
+            next_time += datetime.timedelta(hours=1)
+        wait_seconds = (next_time - now).total_seconds()
+
+        await asyncio.sleep(wait_seconds)
+        await send_update_once()
+
 loop = asyncio.get_event_loop()
+loop.create_task(send_periodic_update())
 loop.create_task(client.start(TOKEN))
 loop.create_task(alert_client.start(ALERT_BOT_TOKEN))
 loop.run_forever()
