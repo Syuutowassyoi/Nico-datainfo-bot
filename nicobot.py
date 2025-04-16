@@ -86,31 +86,21 @@ async def send_update_once(is_startup=False):
             log_to_sheet(previous_milestone, now_dt.strftime("%Y-%m-%d %H:%M:%S"))
 
         milestone_text = f"{next_milestone:,} コメントまで：{remaining:,} コメント"
-        prefix = "✅ 起動時チェック
-" if is_startup else ""
+        prefix = "✅ 起動時チェック\n" if is_startup else ""
 
         message = (
-            f"{prefix}📺 **{title}**
-"
-            f"🕒 {now} 現在
-"
-            f"▶️ 再生数: {view:,} 回
-"
-            f"💬 コメント数: {comment:,} 件
-"
-            f"🏁 {milestone_text}
-"
+            f"{prefix}📺 **{title}**\n"
+            f"🕒 {now} 現在\n"
+            f"▶️ 再生数: {view:,} 回\n"
+            f"💬 コメント数: {comment:,} 件\n"
+            f"🏁 {milestone_text}\n"
             f"⏳ {elapsed_text}"
         )
 
         if is_startup or now_dt.strftime("%H:%M") == "00:01":
-            message += f"
-🔗 https://sosuteno.com/jien/STLog/{now_dt.strftime('%Y-%m')}/{now_dt.strftime('%Y-%m-%d')}.txt"
+            message += f"\n🔗 https://sosuteno.com/jien/STLog/{now_dt.strftime('%Y-%m')}/{now_dt.strftime('%Y-%m-%d')}.txt"
 
-        await channel.send(message)}/{now_dt.strftime('%Y-%m-%d')}.txt"
-        )}/{now_dt.strftime('%Y-%m-%d')}.txt"
-        )
-        )
+        await channel.send(message)
     else:
         await channel.send(f"⚠️ {now}：動画データの取得に失敗しました。")
 
