@@ -37,24 +37,27 @@ def log_to_sheet(milestone, timestamp):
     worksheet = sh.worksheet(SHEET_NAME)
     worksheet.append_row([milestone, timestamp])
 
-async def fetch_nicovideo_data(video_id):
+async def fetch_nicovideo_data(video_id, retries=3):
     url = f"https://ext.nicovideo.jp/api/getthumbinfo/{video_id}"
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            if response.status != 200:
-                print(f"HTTPエラー: {response.status}")
-                return None
-            text = await response.text()
-            try:
-                root = ET.fromstring(text)
-                thumb = root.find("thumb")
-                title = thumb.find("title").text
-                view = int(thumb.find("view_counter").text)
-                comment = int(thumb.find("comment_num").text)
-                return title, view, comment
-            except Exception as e:
-                print(f"データ解析エラー: {e}")
-                return None
+    for attempt in range(retries):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status != 200:
+                    print(f"HTTPエラー: {response.status}, 再試行回数: {attempt + 1}")
+                    await asyncio.sleep(5)
+                    continue
+                text = await response.text()
+                try:
+                    root = ET.fromstring(text)
+                    thumb = root.find("thumb")
+                    title = thumb.find("title").text
+                    view = int(thumb.find("view_counter").text)
+                    comment = int(thumb.find("comment_num").text)
+                    return title, view, comment
+                except Exception as e:
+                    print(f"データ解析エラー: {e}, 再試行回数: {attempt + 1}")
+                    await asyncio.sleep(5)
+    return None
 
 async def send_update_once(is_startup=False):
     await client.wait_until_ready()
@@ -124,7 +127,7 @@ def save_milestone(milestone, now_dt):
 
 @alert_client.event
 async def on_message(message):
-    if message.content == "/test" and message.channel.id == ALERT_CHANNEL_ID:
+    if message.content == "/daatatest" and message.channel.id == ALERT_CHANNEL_ID:
         await message.channel.send("✅ 生きてるよ！")
 
 async def send_periodic_update():
@@ -138,14 +141,6 @@ async def send_periodic_update():
 
     while not client.is_closed():
         now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
-        data = await fetch_nicovideo_data(VIDEO_ID)
-
-        if data:
-            _, _, comment = data
-            next_milestone = ((comment // 1_000_000) + 1) * 1_000_000
-            remaining = next_milestone - comment
-            short_interval = remaining <= 5000
-
         interval = 5 if short_interval else 15
         next_minute = ((now.minute // interval + 1) * interval) % 60
         next_time = now.replace(minute=next_minute, second=0, microsecond=0)
@@ -165,4 +160,3 @@ async def main():
         )
 
 asyncio.run(main())
-
