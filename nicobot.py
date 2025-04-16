@@ -55,10 +55,7 @@ async def fetch_nicovideo_data(video_id):
             except Exception as e:
                 print(f"データ解析エラー: {e}")
                 return None
-            text = "
-
-
-          
+                      
 
 async def send_update_once(is_startup=False):
     channel = client.get_channel(CHANNEL_ID)
