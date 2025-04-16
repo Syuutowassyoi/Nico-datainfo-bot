@@ -172,17 +172,29 @@ async def on_message(message):
     elif message.content == "/test":
         await send_update_once()
     if message.content.startswith("daily-ranking"):
+        def check_author(m):
+            return m.author == message.author and m.channel == message.channel
         try:
-            _, date_str = message.content.strip().split(maxsplit=1)
-            dt = datetime.datetime.strptime(date_str, "%Y/%m/%d")
-            y, m, d = dt.year, dt.month, dt.day
+            await message.channel.send("📅 年（4桁）を入力してください：")
+            year_msg = await client.wait_for("message", check=check_author, timeout=60.0)
+            await message.channel.send("📅 月（1〜12）を入力してください：")
+            month_msg = await client.wait_for("message", check=check_author, timeout=60.0)
+            await message.channel.send("📅 日（1〜31）を入力してください：")
+            day_msg = await client.wait_for("message", check=check_author, timeout=60.0)
+
+            y = int(year_msg.content)
+            m = int(month_msg.content)
+            d = int(day_msg.content)
+            dt = datetime.datetime(year=y, month=m, day=d)
             rankings = await fetch_supporter_ranking(y, m, d)
             if rankings:
-                text = "\n".join([f"{i+1}位: {name} - {count:,}コメント" for i, (name, count) in enumerate(rankings)])
-                await message.channel.send(f"📊 支援者ランキング（{dt.strftime('%Y/%m/%d')}）\n{text}")
+                text = "
+".join([f"{i+1}位: {name} - {count:,}コメント" for i, (name, count) in enumerate(rankings)])
+                await message.channel.send(f"📊 支援者ランキング（{dt.strftime('%Y/%m/%d')}）
+{text}")
             else:
-                await message.channel.send(f"⚠️ 指定された日のランキングが見つかりませんでした。")
-        except Exception as e:
+                await message.channel.send("⚠️ 指定された日のランキングが見つかりませんでした。")
+
             await message.channel.send(f"⚠️ 日付形式が間違っています。例: daily-ranking 2025/04/14")
 
 @alert_client.event
